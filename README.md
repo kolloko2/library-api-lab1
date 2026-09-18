@@ -30,7 +30,7 @@ pytest -q
 python -m compileall app
 ```
 
-Подробное [ТЗ](docs/TECHNICAL_SPEC.md), [API](docs/API.md), [схема БД](docs/SCHEMA.md), [Git-процесс](docs/GIT_PROCESS.md) и готовый [отчёт](REPORT.md) находятся в репозитории.
+Подробное [ТЗ](docs/TECHNICAL_SPEC.md), [API](docs/API.md), [схема БД](docs/SCHEMA.md), [Git-процесс](docs/GIT_PROCESS.md), [текст отчёта](REPORT.md) и [оформленный отчёт DOCX](docs/ЛР1_Библиотека_241-372.docx) находятся в репозитории.
 
 ## Правила внесения изменений
 
