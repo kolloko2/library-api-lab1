@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -52,4 +53,15 @@ class BookCopy(Base):
     is_available: Mapped[bool] = mapped_column(Boolean, default=True)
     book: Mapped[Book] = relationship(back_populates="copies")
     branch: Mapped[Branch] = relationship(back_populates="copies")
+    loans: Mapped[list[Loan]] = relationship(back_populates="copy")
 
+
+class Loan(Base):
+    __tablename__ = "loans"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    copy_id: Mapped[int] = mapped_column(ForeignKey("book_copies.id", ondelete="RESTRICT"))
+    reader_name: Mapped[str] = mapped_column(String(200), index=True)
+    loaned_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
+    returned_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    copy: Mapped[BookCopy] = relationship(back_populates="loans")

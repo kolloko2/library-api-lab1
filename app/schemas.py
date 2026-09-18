@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -42,3 +44,14 @@ class CopyRead(CopyCreate):
     is_available: bool
     model_config = ConfigDict(from_attributes=True)
 
+
+class LoanCreate(BaseModel):
+    copy_id: int = Field(gt=0)
+    reader_name: str = Field(min_length=2, max_length=200)
+
+
+class LoanRead(LoanCreate):
+    id: int
+    loaned_at: datetime
+    returned_at: datetime | None
+    model_config = ConfigDict(from_attributes=True)
