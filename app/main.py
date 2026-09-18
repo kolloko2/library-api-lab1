@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.database import Base, engine, get_db
-from app.models import Author, Book, BookCopy, Branch
+from app.models import Author, Book, BookCopy, Branch, Loan
 from app.schemas import (
     AuthorCreate,
     AuthorRead,
@@ -17,6 +18,8 @@ from app.schemas import (
     BranchRead,
     CopyCreate,
     CopyRead,
+    LoanCreate,
+    LoanRead,
 )
 
 
@@ -121,3 +124,53 @@ def list_copies(
         query = query.where(BookCopy.is_available == available)
     return db.scalars(query).all()
 
+
+@app.post("/loans", response_model=LoanRead, status_code=status.HTTP_201_CREATED)
+def create_loan(payload: LoanCreate, db: Session = Depends(get_db)):
+    copy = db.get(BookCopy, payload.copy_id)
+    if copy is None:
+        raise HTTPException(status_code=404, detail="Экземпляр не найден")
+    if not copy.is_available:
+        raise HTTPException(status_code=409, detail="Экземпляр уже выдан")
+
+    active_count = db.scalar(
+        select(func.count(Loan.id)).where(
+            Loan.reader_name == payload.reader_name,
+            Loan.returned_at.is_(None),
+        )
+    )
+    if active_count >= get_settings().max_active_loans:
+        raise HTTPException(
+            status_code=409,
+            detail="Читатель достиг лимита активных выдач",
+        )
+
+    loan = Loan(copy_id=copy.id, reader_name=payload.reader_name)
+    copy.is_available = False
+    db.add(loan)
+    db.commit()
+    db.refresh(loan)
+    return loan
+
+
+@app.get("/loans", response_model=list[LoanRead])
+def list_loans(active_only: bool = False, db: Session = Depends(get_db)):
+    query = select(Loan).order_by(Loan.loaned_at.desc())
+    if active_only:
+        query = query.where(Loan.returned_at.is_(None))
+    return db.scalars(query).all()
+
+
+@app.post("/loans/{loan_id}/return", response_model=LoanRead)
+def return_loan(loan_id: int, db: Session = Depends(get_db)):
+    loan = db.get(Loan, loan_id)
+    if loan is None:
+        raise HTTPException(status_code=404, detail="Выдача не найдена")
+    if loan.returned_at is not None:
+        raise HTTPException(status_code=409, detail="Выдача уже возвращена")
+
+    loan.returned_at = datetime.now(timezone.utc)
+    loan.copy.is_available = True
+    db.commit()
+    db.refresh(loan)
+    return loan
