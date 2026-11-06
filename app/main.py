@@ -152,7 +152,7 @@ def create_loan(payload: LoanCreate, db: Session = Depends(get_db)):
             Loan.returned_at.is_(None),
         )
     )
-    if active_count >= get_settings().max_active_loans:
+    if active_count > get_settings().max_active_loans:
         raise HTTPException(
             status_code=409,
             detail="Читатель достиг лимита активных выдач",
