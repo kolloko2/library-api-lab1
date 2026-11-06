@@ -16,6 +16,7 @@ class BookCreate(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     isbn: str = Field(pattern=r"^(?:\d{10}|\d{13})$")
     author_id: int = Field(gt=0)
+    publication_year: int | None = Field(default=None, ge=1450, le=2100)
 
 
 class BookRead(BookCreate):

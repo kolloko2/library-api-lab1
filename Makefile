@@ -19,9 +19,13 @@ restore:
 verify: quality test
 	$(PYTHON) -m compileall -q app migrations scripts
 	$(PYTHON) -m pip_audit -r requirements.txt
+	$(PYTHON) scripts/mutation_check.py
 up:
 	docker compose up -d --build --wait
 down:
 	docker compose down
 container-check:
 	$(PYTHON) scripts/container_check.py
+	mkdir -p artifacts
+	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$(CURDIR)/artifacts:/reports" aquasec/trivy:0.65.0 image --scanners vuln --severity HIGH,CRITICAL --format json --output /reports/image-scan.json library-api:local
+	docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.65.0 image --scanners vuln --severity CRITICAL --exit-code 1 library-api:local

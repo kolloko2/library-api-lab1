@@ -12,4 +12,5 @@ pytest-cov==6.3.0
 ruff==0.13.0
 bandit==1.8.6
 pip-audit==2.9.0
+defusedxml==0.7.1
 

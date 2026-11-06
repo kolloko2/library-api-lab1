@@ -1,4 +1,6 @@
 from functools import lru_cache
+import socket
+from pydantic import Field
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -9,7 +11,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./library.db"
     max_active_loans: int = 5
     app_version: str = "development"
-    instance_id: str = "local"
+    instance_id: str = Field(default_factory=socket.gethostname)
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

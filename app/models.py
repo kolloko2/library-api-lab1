@@ -29,6 +29,7 @@ class Book(Base):
     title: Mapped[str] = mapped_column(String(300), index=True)
     isbn: Mapped[str] = mapped_column(String(20), unique=True, index=True)
     author_id: Mapped[int] = mapped_column(ForeignKey("authors.id", ondelete="RESTRICT"))
+    publication_year: Mapped[int | None] = mapped_column(nullable=True)
     author: Mapped[Author] = relationship(back_populates="books")
     copies: Mapped[list[BookCopy]] = relationship(back_populates="book")
 

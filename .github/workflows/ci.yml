@@ -28,6 +28,11 @@ jobs:
           python-version: '3.13'
       - run: make setup
       - run: DB_PASSWORD=$(openssl rand -hex 24) make container-check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: image-security-report
+          path: artifacts/image-scan.json
   publish:
     needs: [verify, containers, secrets]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -46,7 +51,15 @@ jobs:
         with:
           context: .
           push: true
+          load: true
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+      - name: Export accepted image
+        run: docker save ghcr.io/${{ github.repository }}:${{ github.sha }} | gzip > image.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-image
+          path: image.tar.gz
+          retention-days: 7
   secrets:
     runs-on: ubuntu-24.04
     steps:
@@ -55,4 +68,4 @@ jobs:
           fetch-depth: 0
       - name: Scan repository for secrets
         run: |
-          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.2 detect --source=/repo --redact --no-banner
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.2 detect --source=/repo --log-opts=HEAD --redact --no-banner

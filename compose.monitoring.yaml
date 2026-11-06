@@ -9,6 +9,10 @@ services:
     mem_limit: 256m
   node-exporter:
     image: prom/node-exporter:v1.9.1
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    command: ['--path.rootfs=/host', '--path.procfs=/host/proc', '--path.sysfs=/host/sys']
     networks: [backend]
     mem_limit: 64m
   grafana:

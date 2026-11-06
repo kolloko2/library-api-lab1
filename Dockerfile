@@ -1,8 +1,8 @@
-FROM python:3.13.7-slim-bookworm
+FROM python:3.13.18-slim-trixie
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && useradd --uid 10001 --create-home library
+COPY requirements-runtime.txt .
+RUN pip install --no-cache-dir -r requirements-runtime.txt && useradd --uid 10001 --create-home library
 COPY app app
 COPY migrations migrations
 COPY alembic.ini .

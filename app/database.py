@@ -10,7 +10,9 @@ class Base(DeclarativeBase):
 
 def make_engine(database_url: str):
     connect_args = {"check_same_thread": False} if database_url.startswith("sqlite") else {}
-    return create_engine(database_url, connect_args=connect_args)
+    if database_url.startswith("postgresql"):
+        connect_args = {"connect_timeout": 5}
+    return create_engine(database_url, connect_args=connect_args, pool_pre_ping=True)
 
 
 engine = make_engine(get_settings().database_url)
