@@ -53,6 +53,6 @@ jobs:
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p /var/lib/library/releases/$RELEASE_SHA"
-          scp -o BatchMode=yes release-image/image.tar.gz "$DEPLOY_USER@$DEPLOY_HOST:/var/lib/library/releases/$RELEASE_SHA/image.tar.gz"
+          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p /srv/library-releases/$RELEASE_SHA"
+          scp -o BatchMode=yes release-image/image.tar.gz "$DEPLOY_USER@$DEPLOY_HOST:/srv/library-releases/$RELEASE_SHA/image.tar.gz"
           ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "sudo -n /usr/local/sbin/library-deploy $RELEASE_SHA"

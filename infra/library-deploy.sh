@@ -10,7 +10,7 @@ git switch --detach "$sha"
 export APP_IMAGE="127.0.0.1:5000/library:$sha" APP_VERSION="$sha"
 compose=(docker compose --env-file /etc/library/container.env -f compose.yaml -f compose.registry.yaml)
 "${compose[@]}" up -d registry
-archive="/var/lib/library/releases/$sha/image.tar.gz"
+archive="/srv/library-releases/$sha/image.tar.gz"
 if [[ -f "$archive" ]]; then
     gzip -dc "$archive" | docker load
     docker image inspect "ghcr.io/kolloko2/library-api-lab1:$sha" >/dev/null
