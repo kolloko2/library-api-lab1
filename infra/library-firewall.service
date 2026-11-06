@@ -1,0 +1,9 @@
+[Unit]
+Description=Library host firewall
+After=network.target docker.service netfilter-persistent.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/library-firewall
+[Install]
+WantedBy=multi-user.target
