@@ -46,7 +46,15 @@ jobs:
         with:
           context: .
           push: true
+          load: true
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+      - name: Export accepted image
+        run: docker save ghcr.io/${{ github.repository }}:${{ github.sha }} | gzip > image.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-image
+          path: image.tar.gz
+          retention-days: 7
   secrets:
     runs-on: ubuntu-24.04
     steps:

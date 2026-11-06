@@ -33,7 +33,6 @@ services:
       DATABASE_URL: postgresql+psycopg://library:${DB_PASSWORD:?Set DB_PASSWORD}@db:5432/library
       APP_ENV: staging
       APP_VERSION: ${APP_VERSION:-local}
-      INSTANCE_ID: app
     depends_on:
       migrate:
         condition: service_completed_successfully
