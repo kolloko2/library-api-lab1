@@ -19,7 +19,7 @@ if [[ -f "$archive" ]]; then
 fi
 "${compose[@]}" pull app migrate
 "${compose[@]}" up -d --no-build --scale app=2 --wait --wait-timeout 180
-"${compose[@]}" exec -T nginx nginx -s reload
+"${compose[@]}" up -d --no-deps --force-recreate --wait nginx
 /opt/library/.venv/bin/python scripts/release_check.py http://127.0.0.1:8080 "$sha"
 printf '%s\n' "$sha" > /var/lib/library/deployed-sha
 printf 'APP_IMAGE=%s\nAPP_VERSION=%s\n' "$APP_IMAGE" "$APP_VERSION" > /var/lib/library/release.env
