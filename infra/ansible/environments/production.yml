@@ -1,2 +1,4 @@
 library_environment: production
 library_version: production
+library_app_ip: 192.168.78.10
+library_db_ip: 192.168.78.11

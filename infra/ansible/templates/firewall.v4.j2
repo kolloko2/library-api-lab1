@@ -1,14 +1,14 @@
 *filter
-:INPUT DROP [0:0]
-:FORWARD ACCEPT [0:0]
-:OUTPUT ACCEPT [0:0]
--A INPUT -i lo -j ACCEPT
--A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
--A INPUT -p tcp -s 10.0.2.2/32 --dport 22 -j ACCEPT
--A INPUT -p tcp -s 192.168.77.10/32 --dport 22 -j ACCEPT
+:LIBRARY_MANAGED - [0:0]
+-F LIBRARY_MANAGED
+-A LIBRARY_MANAGED -i lo -j ACCEPT
+-A LIBRARY_MANAGED -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A LIBRARY_MANAGED -p tcp -s 10.0.2.2/32 --dport 22 -j ACCEPT
+-A LIBRARY_MANAGED -p tcp -s {{ library_app_ip }}/32 --dport 22 -j ACCEPT
 {% if inventory_hostname in groups['database'] %}
--A INPUT -p tcp -s 192.168.77.10/32 --dport 5432 -j ACCEPT
+-A LIBRARY_MANAGED -p tcp -s {{ library_app_ip }}/32 --dport 5432 -j ACCEPT
 {% else %}
--A INPUT -p tcp --dport 8000 -j ACCEPT
+-A LIBRARY_MANAGED -p tcp --dport 8000 -j ACCEPT
 {% endif %}
+-A LIBRARY_MANAGED -j DROP
 COMMIT

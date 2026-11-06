@@ -1,0 +1,59 @@
+- name: Create runtime data directory
+  ansible.builtin.file:
+    path: /var/lib/library
+    state: directory
+    owner: library
+    group: library
+    mode: '0750'
+- name: Fetch accepted application source
+  ansible.builtin.git:
+    repo: https://github.com/kolloko2/library-api-lab1.git
+    dest: /opt/library
+    version: '{{ library_source_revision }}'
+    update: true
+  notify: Restart application
+- name: Install application virtual environment
+  ansible.builtin.pip:
+    requirements: /opt/library/requirements.txt
+    virtualenv: /opt/library/.venv
+    virtualenv_command: python3 -m venv
+  notify: Restart application
+- name: Render application environment
+  ansible.builtin.template:
+    src: library.env.j2
+    dest: /etc/library/library.env
+    group: library
+    mode: '0640'
+  no_log: true
+  notify: Restart application
+- name: Inspect current migration
+  ansible.builtin.command: /opt/library/.venv/bin/python -m alembic current
+  args:
+    chdir: /opt/library
+  environment:
+    DATABASE_URL: 'postgresql+psycopg://library:{{ library_db_password }}@{{ library_db_ip }}:5432/library'
+  register: current_migration
+  changed_when: false
+  no_log: true
+- name: Apply required migrations
+  ansible.builtin.command: /opt/library/.venv/bin/python -m alembic upgrade head
+  args:
+    chdir: /opt/library
+  environment:
+    DATABASE_URL: 'postgresql+psycopg://library:{{ library_db_password }}@{{ library_db_ip }}:5432/library'
+  when: library_migration_revision not in current_migration.stdout
+  no_log: true
+  changed_when: true
+  notify: Restart application
+- name: Install application service unit
+  ansible.builtin.copy:
+    src: ../library.service
+    dest: /etc/systemd/system/library.service
+    mode: '0644'
+  notify: Restart application
+- name: Enable application service
+  ansible.builtin.systemd_service:
+    name: library
+    state: started
+    enabled: true
+    daemon_reload: true

@@ -5,6 +5,7 @@ import uuid
 
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, Gauge, generate_latest
 from sqlalchemy import select, func
+from sqlalchemy.exc import SQLAlchemyError
 from app.database import get_db
 from fastapi import Depends
 from app.models import Loan
@@ -13,7 +14,12 @@ from starlette.responses import Response
 REQUESTS = Counter("library_requests_total", "HTTP requests", ["method", "route", "status"])
 LATENCY = Histogram("library_request_seconds", "HTTP latency", ["route"])
 LOG = logging.getLogger("library.requests")
+LOG.setLevel(logging.INFO)
+if not LOG.handlers:
+    LOG.addHandler(logging.StreamHandler())
+LOG.propagate = False
 ACTIVE_LOANS = Gauge("library_active_loans", "Current active book loans")
+DATABASE_UP = Gauge("library_database_up", "Database query succeeded on the latest scrape")
 
 
 def install_observability(app):
@@ -32,7 +38,8 @@ def install_observability(app):
             elapsed = time.monotonic() - started
             REQUESTS.labels(request.method, route, str(status)).inc()
             LATENCY.labels(route).observe(elapsed)
-            LOG.warning(
+            LOG.log(
+                logging.ERROR if status >= 500 else logging.INFO,
                 json.dumps(
                     {
                         "time": time.time(),
@@ -43,10 +50,18 @@ def install_observability(app):
                         "duration_seconds": elapsed,
                         "request_id": request_id,
                     }
-                )
+                ),
             )
 
     @app.get("/metrics", include_in_schema=False)
     def metrics(db=Depends(get_db)):
-        ACTIVE_LOANS.set(db.scalar(select(func.count(Loan.id)).where(Loan.returned_at.is_(None))))
+        try:
+            active = db.scalar(select(func.count(Loan.id)).where(Loan.returned_at.is_(None)))
+        except SQLAlchemyError:
+            db.rollback()
+            DATABASE_UP.set(0)
+            ACTIVE_LOANS.set(float("nan"))
+        else:
+            DATABASE_UP.set(1)
+            ACTIVE_LOANS.set(active)
         return Response(generate_latest(), headers={"Content-Type": CONTENT_TYPE_LATEST})

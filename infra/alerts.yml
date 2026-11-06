@@ -2,9 +2,23 @@ groups:
   - name: library
     rules:
       - alert: LibraryUnavailable
-        expr: up{job="library"} == 0
+        expr: sum(up{job="library"}) == 0 or absent(up{job="library"})
         for: 1m
         labels:
           severity: critical
         annotations:
           summary: Library API unavailable for one minute
+      - alert: LibraryDatabaseUnavailable
+        expr: min(library_database_up) == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: Application cannot query its database
+      - alert: LibraryReplicaDegraded
+        expr: sum(up{job="library"}) < 2
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: Fewer than two application replicas are available
