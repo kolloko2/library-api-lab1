@@ -7,15 +7,38 @@ on:
         required: true
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: staging-deployment
   cancel-in-progress: false
 jobs:
   deploy:
     environment: staging
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, linux, x64, library-staging]
     steps:
       - uses: actions/checkout@v4
+      - name: Find accepted CI image
+        id: image
+        uses: actions/github-script@v7
+        env:
+          RELEASE_SHA: ${{ inputs.sha }}
+        with:
+          script: |
+            const sha = process.env.RELEASE_SHA;
+            if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('Full SHA required');
+            const runs = await github.rest.actions.listWorkflowRunsForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              head_sha: sha, branch: 'main', status: 'success', per_page: 30
+            });
+            const run = runs.data.workflow_runs.find(r => r.name === 'CI' && r.event === 'push');
+            if (!run) throw new Error('Successful main CI required');
+            core.setOutput('run_id', run.id);
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-image
+          run-id: ${{ steps.image.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: release-image
       - name: Deploy through dedicated account
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
@@ -30,4 +53,6 @@ jobs:
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "cd /opt/library && APP_IMAGE=ghcr.io/kolloko2/library-api-lab1:$RELEASE_SHA APP_VERSION=$RELEASE_SHA sh scripts/deploy.sh"
+          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p /var/lib/library/releases/$RELEASE_SHA"
+          scp -o BatchMode=yes release-image/image.tar.gz "$DEPLOY_USER@$DEPLOY_HOST:/var/lib/library/releases/$RELEASE_SHA/image.tar.gz"
+          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "sudo -n /usr/local/sbin/library-deploy $RELEASE_SHA"
