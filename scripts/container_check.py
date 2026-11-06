@@ -13,12 +13,17 @@ def main():
     uid = run("docker", "compose", "exec", "-T", "app", "id", "-u")
     if uid == "0":
         raise SystemExit("Application runs as root")
-    app_id = run("docker", "compose", "ps", "-q", "app")
-    details = json.loads(run("docker", "inspect", app_id))[0]
-    if details["State"]["Health"]["Status"] != "healthy":
-        raise SystemExit("Application healthcheck failed")
-    if not details["HostConfig"]["Memory"] or not details["HostConfig"]["NanoCpus"]:
-        raise SystemExit("Application resource limits are required")
+    app_ids = run("docker", "compose", "ps", "-q", "app").splitlines()
+    if not app_ids:
+        raise SystemExit("No application containers found")
+    for app_id in app_ids:
+        details = json.loads(run("docker", "inspect", app_id))[0]
+        if details["Config"]["User"] in ("", "0", "root"):
+            raise SystemExit("Application container must specify a non-root user")
+        if details["State"]["Health"]["Status"] != "healthy":
+            raise SystemExit("Application healthcheck failed")
+        if not details["HostConfig"]["Memory"] or not details["HostConfig"]["NanoCpus"]:
+            raise SystemExit("Application resource limits are required")
     db_id = run("docker", "compose", "ps", "-q", "db")
     database = json.loads(run("docker", "inspect", db_id))[0]
     if any(database["NetworkSettings"]["Ports"].values()):
