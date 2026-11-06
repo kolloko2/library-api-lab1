@@ -2,7 +2,7 @@
   "title": "Library operations",
   "uid": "library",
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "15s",
   "panels": [
     {
@@ -21,7 +21,8 @@
       },
       "targets": [
         {
-          "expr": "sum(up{job=\"library\"})",
+          "expr": "sum(up{job=\"library\"} * on(instance) library_database_up)",
+          "instant": true,
           "refId": "A"
         }
       ]
@@ -106,6 +107,7 @@
       "targets": [
         {
           "expr": "max(library_active_loans)",
+          "instant": true,
           "refId": "A"
         }
       ]
@@ -132,6 +134,7 @@
       "targets": [
         {
           "expr": "min(library_database_up)",
+          "instant": true,
           "refId": "A"
         }
       ]
