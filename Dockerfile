@@ -1,4 +1,4 @@
-FROM python:3.13.7-slim-bookworm
+FROM python:3.13.18-slim-bookworm
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY requirements-runtime.txt .
