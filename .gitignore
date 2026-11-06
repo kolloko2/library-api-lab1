@@ -12,4 +12,7 @@ venv/
 .vscode/
 dist/
 build/
+artifacts/
+*.dump
+.coverage.*
 
