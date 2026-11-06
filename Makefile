@@ -19,6 +19,7 @@ restore:
 verify: quality test
 	$(PYTHON) -m compileall -q app migrations scripts
 	$(PYTHON) -m pip_audit -r requirements.txt
+	$(PYTHON) scripts/mutation_check.py
 up:
 	docker compose up -d --build --wait
 down:

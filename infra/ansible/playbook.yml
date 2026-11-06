@@ -1,17 +1,20 @@
-- name: Prepare library container host
+- name: Configure library nodes
   hosts: all
   become: true
   tasks:
     - name: Install packages
       ansible.builtin.apt:
-        name: [docker.io, docker-compose-v2, iptables, iptables-persistent, python3]
+        name: [ca-certificates, curl, git, python3, python3-venv, iptables, iptables-persistent]
         update_cache: true
+        cache_valid_time: 3600
         state: present
-    - name: Enable Docker
-      ansible.builtin.service:
-        name: docker
-        enabled: true
-        state: started
+    - name: Configure SSH
+      ansible.builtin.copy:
+        src: ../sshd-library.conf
+        dest: /etc/ssh/sshd_config.d/library.conf
+        mode: '0644'
+        validate: /usr/sbin/sshd -t -f %s
+      notify: Reload SSH
     - name: Create service user
       ansible.builtin.user:
         name: library
@@ -23,10 +26,43 @@
         path: /etc/library
         state: directory
         owner: root
-        group: root
-        mode: '0700'
-    - name: Check deployed service
+        group: library
+        mode: '0750'
+    - name: Render firewall rules
+      ansible.builtin.template:
+        src: firewall.v4.j2
+        dest: /etc/iptables/rules.v4
+        mode: '0600'
+      notify: Apply firewall
+    - name: Render application environment
+      ansible.builtin.template:
+        src: library.env.j2
+        dest: /etc/library/library.env
+        group: library
+        mode: '0640'
+      when: inventory_hostname in groups['app']
+      no_log: true
+      notify: Restart application
+    - name: Apply configuration changes
+      ansible.builtin.meta: flush_handlers
+    - name: Verify application health
       ansible.builtin.uri:
-        url: http://127.0.0.1:8080/health
+        url: http://127.0.0.1:8000/health
         status_code: 200
-      when: verify_deployment | default(false) | bool
+      when: inventory_hostname in groups['app']
+      register: health
+      retries: 5
+      delay: 2
+      until: health.status == 200
+  handlers:
+    - name: Reload SSH
+      ansible.builtin.service:
+        name: ssh
+        state: reloaded
+    - name: Apply firewall
+      ansible.builtin.command: /sbin/iptables-restore /etc/iptables/rules.v4
+      changed_when: true
+    - name: Restart application
+      ansible.builtin.systemd_service:
+        name: library
+        state: restarted
