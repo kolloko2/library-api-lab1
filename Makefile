@@ -3,7 +3,7 @@ PYTHON ?= python
 setup:
 	$(PYTHON) -m pip install -r requirements.txt
 run:
-	$(PYTHON) -m uvicorn app.main:app --host 0.0.0.0
+	$(PYTHON) -m uvicorn app.main:app --host 0.0.0.0 --no-access-log
 test:
 	$(PYTHON) -m pytest --cov=app --cov-fail-under=40 --cov-report=xml:artifacts/coverage.xml --junitxml=artifacts/junit.xml
 quality:
