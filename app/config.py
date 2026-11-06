@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str = "sqlite:///./library.db"
     max_active_loans: int = 5
+    app_version: str = "development"
+    instance_id: str = "local"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
@@ -15,4 +17,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

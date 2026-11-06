@@ -1,0 +1,33 @@
+name: Deploy selected release
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full commit SHA of a published image
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: staging-deployment
+  cancel-in-progress: false
+jobs:
+  deploy:
+    environment: staging
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy through dedicated account
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          RELEASE_SHA: ${{ inputs.sha }}
+        run: |
+          test ${#RELEASE_SHA} -eq 40
+          case "$RELEASE_SHA" in *[!0-9a-f]*) exit 1;; esac
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "cd /opt/library && APP_IMAGE=ghcr.io/kolloko2/library-api-lab1:$RELEASE_SHA APP_VERSION=$RELEASE_SHA sh scripts/deploy.sh"

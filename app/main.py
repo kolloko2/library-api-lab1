@@ -2,12 +2,13 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.database import Base, engine, get_db
+from app.database import engine, get_db
+from app.observability import install_observability
 from app.models import Author, Book, BookCopy, Branch, Loan
 from app.schemas import (
     AuthorCreate,
@@ -25,11 +26,13 @@ from app.schemas import (
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
     yield
 
 
 app = FastAPI(title=get_settings().app_name, version="0.1.0", lifespan=lifespan)
+install_observability(app)
 
 
 def commit_or_conflict(db: Session, detail: str):
@@ -41,8 +44,18 @@ def commit_or_conflict(db: Session, detail: str):
 
 
 @app.get("/health", tags=["service"])
-def health():
+def health(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Database unavailable") from exc
     return {"status": "ok", "environment": get_settings().app_env}
+
+
+@app.get("/version", tags=["service"])
+def version():
+    settings = get_settings()
+    return {"version": settings.app_version, "instance": settings.instance_id}
 
 
 @app.post("/authors", response_model=AuthorRead, status_code=status.HTTP_201_CREATED)

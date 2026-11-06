@@ -14,9 +14,7 @@ from app.main import app
 
 @pytest.fixture
 def client():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     TestingSession = sessionmaker(bind=engine, expire_on_commit=False)
     Base.metadata.create_all(engine)
 
@@ -29,4 +27,4 @@ def client():
         yield test_client
     app.dependency_overrides.clear()
     Base.metadata.drop_all(engine)
-
+    engine.dispose()

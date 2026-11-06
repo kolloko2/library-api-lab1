@@ -1,0 +1,20 @@
+[Unit]
+Description=Library HTTP API
+After=network-online.target
+Wants=network-online.target
+[Service]
+User=library
+Group=library
+WorkingDirectory=/opt/library
+EnvironmentFile=/etc/library/library.env
+ExecStart=/opt/library/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/library
+UMask=0027
+[Install]
+WantedBy=multi-user.target
