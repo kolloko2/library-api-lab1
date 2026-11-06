@@ -7,6 +7,7 @@ import sqlite3
 import subprocess
 
 from sqlalchemy.engine import make_url
+from dotenv import dotenv_values
 
 
 def main():
@@ -14,7 +15,9 @@ def main():
     parser.add_argument("action", choices=["backup", "restore"])
     parser.add_argument("file", type=Path)
     args = parser.parse_args()
-    url = make_url(os.environ.get("DATABASE_URL", "sqlite:///library.db"))
+    url = make_url(
+        os.environ.get("DATABASE_URL") or dotenv_values(".env").get("DATABASE_URL") or "sqlite:///library.db"
+    )
     if url.drivername.startswith("sqlite"):
         source, target = (
             (url.database, str(args.file)) if args.action == "backup" else (str(args.file), url.database)
