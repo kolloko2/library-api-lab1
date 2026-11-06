@@ -59,3 +59,31 @@ def test_metrics_remain_available_when_database_fails(client):
         app.dependency_overrides[get_db] = healthy_override
     recovered = client.get("/metrics")
     assert "library_database_up 1.0" in recovered.text
+
+
+def test_structured_logs_exclude_request_secrets(client):
+    import io
+    import json
+    import logging
+
+    from app.observability import LOG
+
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    LOG.addHandler(handler)
+    try:
+        response = client.get(
+            "/books?title=private-query-marker",
+            headers={"Authorization": "Bearer private-header-marker"},
+        )
+        client.post("/authors", json={"name": "private-body-marker"})
+    finally:
+        LOG.removeHandler(handler)
+    output = stream.getvalue()
+    for marker in ("private-query-marker", "private-header-marker", "private-body-marker"):
+        assert marker not in output
+    events = [json.loads(line) for line in output.splitlines()]
+    assert events[0]["request_id"] == response.headers["X-Request-ID"]
+    assert events[0]["route"] == "/books"
+    assert events[0]["status"] == 200
+    assert events[0]["level"] == "INFO"

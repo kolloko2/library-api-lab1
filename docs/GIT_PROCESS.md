@@ -28,19 +28,21 @@ git switch main
 git pull
 git switch -c fix/<номер-задачи>-short-name
 # изменить код/документацию
-pytest -q
-python -m compileall app
+make verify
+# Для контейнерных изменений также make container-check на Linux.
 git add <конкретные-файлы>
 git commit -m "fix: краткое описание"
 git push -u origin HEAD
 gh pr create --fill
 ```
 
-После проверки PR сливается через интерфейс GitHub или `gh pr merge --merge`.
+После успешных обязательных CI-проверок и review владельца кода PR сливается через интерфейс GitHub или `gh pr merge --merge`. Запрещены обход обязательных проверок, снижение порога покрытия и удаление тестов ради приёмки. Для инфраструктурных изменений проверяются применение, доступность API и повторный запуск Ansible без лишних изменений.
 
 ## Проверка секретов
 
 ```bash
 git check-ignore -v .env library.db .venv/
-git ls-files | grep -E '(^|/)(\.env|.*\.db|\.venv)' # вывод должен быть пустым
+git ls-files | rg '(^|/)(\.env$|.*\.db$|\.venv/)'
 ```
+
+Последняя команда не должна находить отслеживаемые локальные файлы. `.env.example` содержит безопасный шаблон и должен оставаться в репозитории. Gitleaks независимо проверяет историю принимаемого коммита.
