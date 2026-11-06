@@ -11,9 +11,24 @@ jobs:
         with:
           python-version: '3.13'
           cache: pip
-      - run: make setup
-      - run: make verify
-      - run: make migrate
+      - name: Install pinned dependencies
+        run: make setup
+      - name: Style and static analysis
+        run: make quality
+      - name: Tests and coverage
+        run: make test
+      - name: Compile application and migration modules
+        run: python -m compileall -q app migrations scripts
+      - name: Audit dependencies
+        run: python -m pip_audit -r requirements.txt
+      - name: Verify that boundary tests reject a mutation
+        run: python scripts/mutation_check.py
+      - name: Apply migrations to an isolated CI database
+        run: make migrate
+      - name: Back up the CI database
+        run: make backup FILE=artifacts/ci-backup.db
+      - name: Restore the CI database
+        run: make restore FILE=artifacts/ci-backup.db
       - uses: actions/upload-artifact@v4
         if: always()
         with:
