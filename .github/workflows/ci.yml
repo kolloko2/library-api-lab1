@@ -29,7 +29,7 @@ jobs:
       - run: make setup
       - run: DB_PASSWORD=$(openssl rand -hex 24) make container-check
   publish:
-    needs: [verify, containers]
+    needs: [verify, containers, secrets]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-24.04
     permissions:
@@ -47,3 +47,12 @@ jobs:
           context: .
           push: true
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+  secrets:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan repository for secrets
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.2 detect --source=/repo --redact --no-banner

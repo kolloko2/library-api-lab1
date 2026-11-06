@@ -18,6 +18,7 @@ restore:
 	$(PYTHON) scripts/database.py restore $(FILE)
 verify: quality test
 	$(PYTHON) -m compileall -q app migrations scripts
+	$(PYTHON) -m pip_audit -r requirements.txt
 up:
 	docker compose up -d --build --wait
 down:
