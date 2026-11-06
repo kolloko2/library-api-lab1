@@ -22,4 +22,6 @@ fi
 "${compose[@]}" exec -T nginx nginx -s reload
 /opt/library/.venv/bin/python scripts/release_check.py http://127.0.0.1:8080 "$sha"
 printf '%s\n' "$sha" > /var/lib/library/deployed-sha
+printf 'APP_IMAGE=%s\nAPP_VERSION=%s\n' "$APP_IMAGE" "$APP_VERSION" > /var/lib/library/release.env
+chmod 0644 /var/lib/library/release.env
 echo "Accepted release $sha"
