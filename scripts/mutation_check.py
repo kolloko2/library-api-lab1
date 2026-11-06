@@ -24,7 +24,15 @@ def main():
             code.replace(original, "if active_count > get_settings().max_active_loans:"), encoding="utf-8"
         )
         result = subprocess.run(
-            [sys.executable, "-m", "pytest", "-q", "tests/test_boundaries.py::test_active_limit"],
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                "-q",
+                "--tb=short",
+                "--show-capture=no",
+                "tests/test_boundaries.py::test_active_limit",
+            ],
             cwd=target,
             capture_output=True,
             text=True,

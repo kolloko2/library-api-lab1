@@ -22,7 +22,7 @@ def test_migrations_preserve_data_and_backup(tmp_path):
     subprocess.run([sys.executable, "scripts/database.py", "restore", str(backup)], env=env, check=True)
     connection = sqlite3.connect(db)
     assert connection.execute("SELECT name FROM authors").fetchone()[0] == "Preserved author"
-    assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "003"
+    assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "004"
     connection.close()
 
 
