@@ -1,0 +1,10 @@
+groups:
+  - name: library
+    rules:
+      - alert: LibraryUnavailable
+        expr: up{job="library"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Library API unavailable for one minute

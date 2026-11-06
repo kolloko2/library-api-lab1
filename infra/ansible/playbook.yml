@@ -1,0 +1,32 @@
+- name: Prepare library container host
+  hosts: all
+  become: true
+  tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        name: [docker.io, docker-compose-v2, iptables, iptables-persistent, python3]
+        update_cache: true
+        state: present
+    - name: Enable Docker
+      ansible.builtin.service:
+        name: docker
+        enabled: true
+        state: started
+    - name: Create service user
+      ansible.builtin.user:
+        name: library
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+    - name: Create configuration directory
+      ansible.builtin.file:
+        path: /etc/library
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+    - name: Check deployed service
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8080/health
+        status_code: 200
+      when: verify_deployment | default(false) | bool

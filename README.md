@@ -12,6 +12,9 @@
 
 ## Запуск
 
+Работы 2–8 и фактический статус серверных проверок описаны в [журнале реализации](docs/LABS_STATUS.md).
+Перед запуском примените миграции: `python -m alembic upgrade head`.
+
 ```bash
 python -m venv .venv
 # Windows: .venv\Scripts\activate
