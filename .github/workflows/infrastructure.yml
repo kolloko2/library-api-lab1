@@ -1,0 +1,59 @@
+name: Configure infrastructure
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Managed environment
+        required: true
+        type: choice
+        options: [staging, production]
+permissions:
+  contents: read
+concurrency:
+  group: library-infrastructure
+  cancel-in-progress: false
+jobs:
+  configure:
+    if: github.ref == 'refs/heads/main'
+    environment: infrastructure
+    runs-on: [self-hosted, linux, x64, library-staging]
+    steps:
+      - name: Apply accepted infrastructure configuration
+        env:
+          INFRA_KEY: ${{ secrets.INFRA_KEY }}
+          INFRA_KNOWN_HOSTS: ${{ secrets.INFRA_KNOWN_HOSTS }}
+          TARGET: ${{ inputs.target }}
+          ACCEPTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          case "$TARGET" in staging|production) ;; *) exit 1;; esac
+          test -n "$INFRA_KEY"
+          test -n "$INFRA_KNOWN_HOSTS"
+          key=$(mktemp)
+          hosts=$(mktemp)
+          trap 'rm -f "$key" "$hosts"' EXIT
+          printf '%s\n' "$INFRA_KEY" > "$key"
+          printf '%s\n' "$INFRA_KNOWN_HOSTS" > "$hosts"
+          chmod 600 "$key" "$hosts"
+          ssh -i "$key" -o BatchMode=yes -o UserKnownHostsFile="$hosts" devops@127.0.0.1 \
+            "sudo -n bash -s -- '$TARGET' '$ACCEPTED_SHA'" <<'REMOTE'
+          set -euo pipefail
+          target=$1
+          sha=$2
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          exec 9>/var/lock/library-infrastructure.lock
+          flock -n 9
+          if [ ! -d /opt/library-infrastructure/.git ]; then
+            git clone https://github.com/kolloko2/library-api-lab1.git /opt/library-infrastructure
+          fi
+          cd /opt/library-infrastructure
+          git fetch origin main
+          git merge-base --is-ancestor "$sha" origin/main
+          git switch --detach "$sha"
+          args=(-i infra/ansible/inventory.ini -e @/etc/library/ansible-vars.json)
+          if [ "$target" = production ]; then
+            args=(-i infra/ansible/inventory.production.ini -e @infra/ansible/environments/production.yml -e @/etc/library/production-ansible.json)
+          fi
+          /opt/library/.venv/bin/ansible-playbook "${args[@]}" infra/ansible/playbook.yml \
+            --private-key /root/.ssh/library_admin --ssh-common-args '-o StrictHostKeyChecking=yes'
+          REMOTE
