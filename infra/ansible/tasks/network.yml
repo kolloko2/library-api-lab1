@@ -21,6 +21,14 @@
   ansible.builtin.command: nmcli -g IP4.ADDRESS device show enp0s8
   register: backend_address
   changed_when: false
+- name: Inspect backend connection priority
+  ansible.builtin.command: nmcli -g connection.autoconnect-priority connection show library-backend
+  register: backend_priority
+  changed_when: false
+- name: Prefer managed static connection at boot
+  ansible.builtin.command: nmcli connection modify library-backend connection.autoconnect-priority 100
+  when: backend_priority.stdout != '100'
+  changed_when: true
 - name: Activate configured backend address
   ansible.builtin.command: nmcli connection up library-backend
   when: (library_backend_ip ~ '/24') not in backend_address.stdout

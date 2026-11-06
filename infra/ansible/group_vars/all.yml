@@ -4,3 +4,4 @@ library_app_ip: 192.168.77.10
 library_db_ip: 192.168.77.11
 library_source_revision: 622d11734d493816111355e5803c3ce3983f4601
 library_migration_revision: '004'
+library_virtualbox_workaround: true

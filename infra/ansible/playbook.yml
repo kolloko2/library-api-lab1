@@ -17,6 +17,19 @@
         state: present
     - name: Configure backend network
       ansible.builtin.include_tasks: tasks/network.yml
+    - name: Create kernel configuration directory
+      ansible.builtin.file:
+        path: /etc/default/grub.d
+        state: directory
+        mode: '0755'
+      when: library_virtualbox_workaround | default(false)
+    - name: Configure stable clock for the laboratory hypervisor
+      ansible.builtin.copy:
+        src: ../virtualbox-grub.cfg
+        dest: /etc/default/grub.d/90-library-clock.cfg
+        mode: '0644'
+      when: library_virtualbox_workaround | default(false)
+      notify: Update boot configuration
     - name: Manage administrative account
       ansible.builtin.user:
         name: devops
@@ -105,6 +118,9 @@
       delay: 2
       until: health.status == 200
   handlers:
+    - name: Update boot configuration
+      ansible.builtin.command: update-grub
+      changed_when: true
     - name: Restart PostgreSQL
       ansible.builtin.service:
         name: postgresql
