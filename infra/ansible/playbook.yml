@@ -2,12 +2,42 @@
   hosts: all
   become: true
   tasks:
+    - name: Require private configuration and trusted administrative key
+      ansible.builtin.assert:
+        that:
+          - library_db_password | length >= 24
+          - library_admin_public_key | length > 100
+        quiet: true
+      no_log: true
     - name: Install packages
       ansible.builtin.apt:
         name: [ca-certificates, curl, git, python3, python3-venv, iptables, iptables-persistent]
         update_cache: true
         cache_valid_time: 3600
         state: present
+    - name: Configure backend network
+      ansible.builtin.include_tasks: tasks/network.yml
+    - name: Manage administrative account
+      ansible.builtin.user:
+        name: devops
+        shell: /bin/bash
+        groups: sudo
+        append: true
+        create_home: true
+    - name: Create administrator key directory
+      ansible.builtin.file:
+        path: /home/devops/.ssh
+        state: directory
+        owner: devops
+        group: devops
+        mode: '0700'
+    - name: Install trusted administrative key
+      ansible.builtin.copy:
+        content: '{{ library_admin_public_key }}'
+        dest: /home/devops/.ssh/authorized_keys
+        owner: devops
+        group: devops
+        mode: '0600'
     - name: Configure SSH
       ansible.builtin.copy:
         src: ../sshd-library.conf
@@ -34,15 +64,17 @@
         dest: /etc/iptables/rules.v4
         mode: '0600'
       notify: Apply firewall
-    - name: Render application environment
-      ansible.builtin.template:
-        src: library.env.j2
-        dest: /etc/library/library.env
-        group: library
-        mode: '0640'
+    - name: Configure PostgreSQL node
+      ansible.builtin.include_tasks: tasks/database.yml
+      when: inventory_hostname in groups['database']
+    - name: Apply database and firewall configuration before application setup
+      ansible.builtin.meta: flush_handlers
+    - name: Configure Docker host
+      ansible.builtin.include_tasks: tasks/docker.yml
       when: inventory_hostname in groups['app']
-      no_log: true
-      notify: Restart application
+    - name: Configure application runtime
+      ansible.builtin.include_tasks: tasks/application.yml
+      when: inventory_hostname in groups['app']
     - name: Apply configuration changes
       ansible.builtin.meta: flush_handlers
     - name: Verify application health
@@ -55,6 +87,10 @@
       delay: 2
       until: health.status == 200
   handlers:
+    - name: Restart PostgreSQL
+      ansible.builtin.service:
+        name: postgresql
+        state: restarted
     - name: Reload SSH
       ansible.builtin.service:
         name: ssh
@@ -66,3 +102,4 @@
       ansible.builtin.systemd_service:
         name: library
         state: restarted
+        daemon_reload: true

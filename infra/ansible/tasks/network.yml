@@ -1,0 +1,27 @@
+- name: Install NetworkManager for backend configuration
+  ansible.builtin.apt:
+    name: network-manager
+    state: present
+- name: Enable NetworkManager
+  ansible.builtin.service:
+    name: NetworkManager
+    state: started
+    enabled: true
+- name: Define static backend connection
+  community.general.nmcli:
+    conn_name: library-backend
+    ifname: enp0s8
+    type: ethernet
+    ip4: '{{ library_backend_ip }}/24'
+    method4: manual
+    method6: disabled
+    autoconnect: true
+    state: present
+- name: Inspect active backend address
+  ansible.builtin.command: nmcli -g IP4.ADDRESS device show enp0s8
+  register: backend_address
+  changed_when: false
+- name: Activate configured backend address
+  ansible.builtin.command: nmcli connection up library-backend
+  when: (library_backend_ip ~ '/24') not in backend_address.stdout
+  changed_when: true

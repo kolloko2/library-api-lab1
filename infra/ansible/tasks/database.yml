@@ -1,0 +1,37 @@
+- name: Install PostgreSQL server and module driver
+  ansible.builtin.apt:
+    name: [postgresql, python3-psycopg2, acl]
+    state: present
+- name: Enable database service
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+- name: Set database listening address
+  ansible.builtin.copy:
+    content: "listen_addresses = '127.0.0.1,{{ library_backend_ip }}'\n"
+    dest: /etc/postgresql/15/main/conf.d/library.conf
+    mode: '0644'
+  notify: Restart PostgreSQL
+- name: Authorize only application database connections
+  community.postgresql.postgresql_pg_hba:
+    dest: /etc/postgresql/15/main/pg_hba.conf
+    contype: host
+    databases: library
+    users: library
+    address: '{{ library_app_ip }}/32'
+    method: scram-sha-256
+  become_user: postgres
+  notify: Restart PostgreSQL
+- name: Configure limited application role
+  community.postgresql.postgresql_user:
+    name: library
+    password: '{{ library_db_password }}'
+    role_attr_flags: LOGIN,NOSUPERUSER,NOCREATEDB,NOCREATEROLE
+  become_user: postgres
+  no_log: true
+- name: Create application database
+  community.postgresql.postgresql_db:
+    name: library
+    owner: library
+  become_user: postgres
