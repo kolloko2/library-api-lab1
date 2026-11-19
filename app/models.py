@@ -75,6 +75,4 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(20), default="reader")
-    created_at: Mapped[datetime] = mapped_column(
-        default=lambda: datetime.now(timezone.utc)
-    )
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))

@@ -194,11 +194,11 @@ def return_loan(loan_id: int, db: Session = Depends(get_db)):
     return loan
 
 
-@app.post("/auth/register", response_model=UserRead, status_code=status.HTTP_201_CREATED, tags=["authentication"])
+@app.post(
+    "/auth/register", response_model=UserRead, status_code=status.HTTP_201_CREATED, tags=["authentication"]
+)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.scalar(
-        select(User).where(User.username == payload.username)
-    )
+    existing_user = db.scalar(select(User).where(User.username == payload.username))
     if existing_user:
         raise HTTPException(status_code=409, detail="Пользователь уже существует")
 
@@ -215,9 +215,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 
 @app.post("/auth/login", response_model=Token, tags=["authentication"])
 def login(payload: UserCreate, db: Session = Depends(get_db)):
-    user = db.scalar(
-        select(User).where(User.username == payload.username)
-    )
+    user = db.scalar(select(User).where(User.username == payload.username))
     if user is None or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
