@@ -10,6 +10,8 @@ from app.config import get_settings
 from app.database import engine, get_db
 from app.observability import install_observability
 from app.models import Author, Book, BookCopy, Branch, Loan
+from app.models import User
+from app.security import hash_password, verify_password, create_access_token, get_current_user
 from app.schemas import (
     AuthorCreate,
     AuthorRead,
@@ -21,6 +23,9 @@ from app.schemas import (
     CopyRead,
     LoanCreate,
     LoanRead,
+    UserCreate,
+    UserRead,
+    Token,
 )
 
 
@@ -187,3 +192,41 @@ def return_loan(loan_id: int, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(loan)
     return loan
+
+
+@app.post(
+    "/auth/register", response_model=UserRead, status_code=status.HTTP_201_CREATED, tags=["authentication"]
+)
+def register(payload: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.scalar(select(User).where(User.username == payload.username))
+    if existing_user:
+        raise HTTPException(status_code=409, detail="Пользователь уже существует")
+
+    user = User(
+        username=payload.username,
+        password_hash=hash_password(payload.password),
+        role="reader",
+    )
+    db.add(user)
+    commit_or_conflict(db, "Пользователь уже существует")
+    db.refresh(user)
+    return user
+
+
+@app.post("/auth/login", response_model=Token, tags=["authentication"])
+def login(payload: UserCreate, db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.username == payload.username))
+    if user is None or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Неверный логин или пароль",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = create_access_token({"sub": user.username})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/auth/me", response_model=UserRead, tags=["authentication"])
+def get_me(current_user: User = Depends(get_current_user)):
+    return current_user

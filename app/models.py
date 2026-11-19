@@ -66,3 +66,13 @@ class Loan(Base):
     loaned_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
     returned_at: Mapped[datetime | None] = mapped_column(nullable=True)
     copy: Mapped[BookCopy] = relationship(back_populates="loans")
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(20), default="reader")
+    created_at: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
