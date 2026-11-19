@@ -10,7 +10,7 @@ psycopg[binary]==3.2.10
 prometheus-client==0.23.1
 pytest-cov==6.3.0
 ruff==0.13.0
-bandit==1.8.6
+bandit==1.9.2
 pip-audit==2.9.0
 defusedxml==0.7.1
 
