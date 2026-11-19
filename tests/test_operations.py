@@ -16,9 +16,7 @@ def test_migrations_preserve_data_and_backup(tmp_path):
     )
 
     connection = sqlite3.connect(db)
-    connection.execute(
-        "INSERT INTO authors (id,name) VALUES (1,'Preserved author')"
-    )
+    connection.execute("INSERT INTO authors (id,name) VALUES (1,'Preserved author')")
     connection.commit()
     connection.close()
 
@@ -29,9 +27,7 @@ def test_migrations_preserve_data_and_backup(tmp_path):
     )
 
     connection = sqlite3.connect(db)
-    expected_revision = connection.execute(
-        "SELECT version_num FROM alembic_version"
-    ).fetchone()[0]
+    expected_revision = connection.execute("SELECT version_num FROM alembic_version").fetchone()[0]
     connection.close()
 
     subprocess.run(
@@ -53,12 +49,8 @@ def test_migrations_preserve_data_and_backup(tmp_path):
 
     connection = sqlite3.connect(db)
 
-    assert connection.execute(
-        "SELECT name FROM authors"
-    ).fetchone()[0] == "Preserved author"
+    assert connection.execute("SELECT name FROM authors").fetchone()[0] == "Preserved author"
 
-    assert connection.execute(
-        "SELECT version_num FROM alembic_version"
-    ).fetchone()[0] == expected_revision
+    assert connection.execute("SELECT version_num FROM alembic_version").fetchone()[0] == expected_revision
 
     connection.close()
