@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    secret_key: str = "change-this-secret-key"
     app_name: str = "Library API"
     app_env: str = "development"
     database_url: str = "sqlite:///./library.db"
